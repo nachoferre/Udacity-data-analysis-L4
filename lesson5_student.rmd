@@ -25,6 +25,14 @@ ggplot(data = subset(pf, !is.na(gender)), aes(x = age, y = friend_count)) +
   geom_line(aes(color = gender), stat = "summary", fun.y = median)
 
 library(dplyr)
+
+pf <- na.omit(pf)
+age_groups <- group_by(pf, age, gender)
+pf.fc_by_age_gender <- summarise(age_groups,
+          mean_friend_count = mean(friend_count),
+          median_friend_count = median(friend_count),
+          n = n())
+head(pf.fc_by_age_gender)
 ```
 
 ***
@@ -33,7 +41,8 @@ library(dplyr)
 Notes:
 
 ```{r Plotting Conditional Summaries}
-
+ggplot(pf.fc_by_age_gender, aes(y = median_friend_count, x = age)) +
+  geom_line(aes(color = gender))
 ```
 
 ***
@@ -52,8 +61,13 @@ Notes:
 Notes:
 
 ```{r}
-install.packages('reshape2')
+
 library(reshape2)
+
+pf.fc_by_age_gender.wide <- dcast(pf.fc_by_age_gender,
+                                  age ~ gender,
+                                  value.var = 'median_friend_count')
+head(pf.fc_by_age_gender.wide)
 ```
 
 
@@ -63,7 +77,9 @@ library(reshape2)
 Notes:
 
 ```{r Ratio Plot}
-
+ggplot(pf.fc_by_age_gender.wide, aes(y = female/male, x = age)) +
+  geom_line() +
+  geom_hline(yintercept = 1, alpha = 0.3)
 ```
 
 ***
@@ -72,7 +88,7 @@ Notes:
 Notes:
 
 ```{r Third Quantitative Variable}
-
+pf$year_joined = ceiling(2014 - pf$tenure/365)
 ```
 
 ***
@@ -81,6 +97,9 @@ Notes:
 Notes:
 
 ```{r Cut a Variable}
+summary(pf$year_joined)
+table(pf$year_joined)
+pf$year_joined.bucket = cut(pf$year_joined, breaks = c(2004, 2009, 2011, 2012, 2014))
 
 ```
 
@@ -90,7 +109,10 @@ Notes:
 Notes:
 
 ```{r Plotting it All Together}
-
+library(ggplot2)
+ggplot(data = subset(pf, !is.na(year_joined.bucket)), aes(x = age, y = friend_count)) +
+  geom_line(aes(color = year_joined.bucket), stat = "summary", fun.y = mean) +
+  geom_line(stat = 'summary', fun.y = mean, linetype = 2)
 ```
 
 ***
@@ -99,6 +121,7 @@ Notes:
 Notes:
 
 ```{r Plot the Grand Mean}
+geom_line(stat = 'summary', fun.y = mean, linetype = 2)
 
 ```
 
@@ -108,7 +131,10 @@ Notes:
 Notes:
 
 ```{r Friending Rate}
-
+aux <- subset(pf, tenure >= 1)
+rate <- aux$friend_count/aux$tenure
+median(rate)
+max(rate)
 ```
 
 ***
@@ -121,7 +147,10 @@ What is the median friend rate?
 What is the maximum friend rate?
 
 ```{r Friendships Initiated}
+length(aux$friendships_initiated/aux$tenure)
 
+ggplot(data = aux, aes(x = tenure, y = (friendships_initiated/tenure))) + 
+  geom_line(aes(color = year_joined.bucket), fun.y = mean)
 ```
 
 ***
@@ -133,9 +162,7 @@ Notes:
 
 ggplot(aes(x = tenure, y = friendships_initiated / tenure),
        data = subset(pf, tenure >= 1)) +
-  geom_line(aes(color = year_joined.bucket),
-            stat = 'summary',
-            fun.y = mean)
+  geom_smooth(aes(color = year_joined.bucket))
 
 ggplot(aes(x = 7 * round(tenure / 7), y = friendships_initiated / tenure),
        data = subset(pf, tenure > 0)) +
@@ -173,7 +200,14 @@ Notes:
 Notes:
 
 ```{r Histograms Revisited}
+yo <- read.csv('yogurt.csv')
+str(yo)
+yo$id <- factor(yo$id)
+str(yo)
 
+ggplot(data = yo, aes(x = price)) + 
+  geom_histogram()
+qplot(data = yo, x = price, fill = I('#F79420'))
 ```
 
 ***
@@ -182,7 +216,7 @@ Notes:
 Notes:
 
 ```{r Number of Purchases}
-
+yo <- transform(yo, all.purchases = strawberry + blueberry + pina.colada + plain + mixed.berry)
 ```
 
 ***
@@ -191,7 +225,9 @@ Notes:
 Notes:
 
 ```{r Prices over Time}
+qplot(x = all.purchases, data = yo, binwidth = 1, fill = I('#099DD9'))
 
+ggplot(aes(x = time, y = price), data = yo) + geom_point()
 ```
 
 ***
@@ -204,7 +240,14 @@ Notes:
 ### Looking at Samples of Households
 
 ```{r Looking at Sample of Households}
+set.seed(400)
+sample.ids <- sample(levels(yo$id), 16)
 
+ggplot(aes(x = time, y = price), 
+       data = subset(yo, id %in% sample.ids)) + 
+  facet_wrap( ~ id) + 
+  geom_line() + 
+  geom_point(aes(size = all.purchases), pch = 1)
 ```
 
 ***
@@ -221,6 +264,15 @@ Notes:
 
 ### Scatterplot Matrix
 Notes:
+```{r}
+library(GGally)
+theme_set(theme_minimal(20))
+
+set.seed(1836)
+pf_subset <- pf[, c(2:15)]
+names(pf_subset)
+ggpairs(pf_subset[sample.int(nrow(pf_subset), 1000), ])
+```
 
 ***
 
@@ -238,6 +290,7 @@ colnames(nci) <- c(1:64)
 ```
 
 ```{r}
+library(reshape2)
 nci.long.samp <- melt(as.matrix(nci[1:200,]))
 names(nci.long.samp) <- c("gene", "case", "value")
 head(nci.long.samp)

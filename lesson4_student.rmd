@@ -231,7 +231,7 @@ Notes:
 Notes:
 
 ```{r More Caution With Correlation}
-install.packages('alr3')
+# install.packages('alr3')
 library(alr3)
 temp <- data(Mitchell)
 temp <- Mitchell
